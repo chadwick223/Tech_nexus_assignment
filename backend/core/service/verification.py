@@ -15,23 +15,29 @@ def verify_billing_action(llm_response_str: str) -> dict:
     except json.JSONDecodeError:
         return {"status": "error", "message": "LLM returned invalid JSON."}
 
+    # Defensive parsing: if data is a list (e.g. from a hallucination), wrap it.
     if isinstance(data, list):
-        action = "add"
-        items = data
+        commands = data
     else:
-        action = data.get("action", "add")
-        items = data.get("items", [])
+        commands = data.get("commands", [])
 
-    if action not in ["add", "remove", "set", "clear"]:
-        return {"status": "error", "message": f"Invalid action: {action}"}
+    if not isinstance(commands, list):
+        return {"status": "error", "message": "Commands must be a list."}
 
-    if not isinstance(items, list):
-        return {"status": "error", "message": "Items must be a list."}
-
-    valid_items = []
-    for item in items:
-        name = item.get("item_name")
-        qty = item.get("quantity")
+    valid_commands = []
+    
+    for cmd in commands:
+        action = cmd.get("action", "add")  # Default to add if missing
+        
+        if action == "clear":
+            valid_commands.append({"action": "clear"})
+            continue
+            
+        if action not in ["add", "remove", "set"]:
+            continue
+            
+        name = cmd.get("item_name")
+        qty = cmd.get("quantity")
         
         if not name or not isinstance(name, str):
             continue  # Skip item with invalid name
@@ -54,12 +60,13 @@ def verify_billing_action(llm_response_str: str) -> dict:
         if not canonical_key:
             return {"status": "error", "message": f"Item '{name}' not found in catalogue."}
             
-        provided_unit = item.get("unit", "")
+        provided_unit = cmd.get("unit", "")
         
         # QUANTITY CONVERSION
         final_qty = normalize_units(float(qty), provided_unit, base_unit)
 
-        valid_items.append({
+        valid_commands.append({
+            "action": action,
             "item_name": canonical_key,
             "quantity": final_qty,
             "unit": base_unit
@@ -68,7 +75,6 @@ def verify_billing_action(llm_response_str: str) -> dict:
     return {
         "status": "success",
         "data": {
-            "action": action,
-            "items": valid_items
+            "commands": valid_commands
         }
     }

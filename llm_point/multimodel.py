@@ -27,9 +27,9 @@ RULES FOR EXTRACTION:
 OUTPUT FORMAT:
 You must output ONLY valid JSON. Do not include markdown formatting, backticks, or conversational text. Use this exact schema:
 {
-  "action": "add | remove | set | clear",
-  "items": [
+  "commands": [
     {
+      "action": "add | remove | set | clear",
       "item_name": "string (product name)",
       "quantity": float (normalized numeric value),
       "unit": "string (optional, standard unit)"
@@ -68,20 +68,21 @@ def process_pos_input(text=None, image_b64=None, image_mime_type='image/jpeg'):
     llm_schema = types.Schema(
         type=types.Type.OBJECT,
         properties={
-            "action": types.Schema(type=types.Type.STRING, description="Must be one of: add, remove, set, clear"),
-            "items": types.Schema(
+            "commands": types.Schema(
                 type=types.Type.ARRAY,
                 items=types.Schema(
                     type=types.Type.OBJECT,
                     properties={
+                        "action": types.Schema(type=types.Type.STRING, description="Must be one of: add, remove, set, clear"),
                         "item_name": types.Schema(type=types.Type.STRING),
                         "quantity": types.Schema(type=types.Type.NUMBER),
                         "unit": types.Schema(type=types.Type.STRING)
-                    }
+                    },
+                    required=["action"]
                 )
             )
         },
-        required=["action", "items"]
+        required=["commands"]
     )
 
     # Call Gemini Flash (the fast, free, multi-modal model)

@@ -136,7 +136,7 @@ async function sendCommand(formData) {
         }
 
         if (res.ok) {
-            showFeedback(`AI extracted: ${data.interpreted_action} ${data.interpreted_items.length} item(s)`);
+            showFeedback(`AI extracted: ${data.interpreted_action} ${data.interpreted_items.length} command(s)`);
             renderCart(data.cart);
         } else {
             showFeedback(`Error: ${data.error || data.message || "Failed to process command"}`, true);

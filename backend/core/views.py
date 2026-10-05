@@ -181,20 +181,20 @@ def process_command(request):
             return JsonResponse(verification_result or {"status": "error", "message": "Unknown error"}, status=400)
     
         data = verification_result["data"]
-        action = data["action"]
-        items = data["items"]
+        commands = data["commands"]
     
         # 3. APPLY TO CART
         def apply_llm_action(cart):
-            if action == "clear":
-                cart["items"] = {}
-                return
-    
             inventory = read_inventory()
     
-            for item in items:
-                name = item["item_name"].replace(" ", "_").lower()  # Normalize keys
-                qty = item["quantity"]
+            for cmd in commands:
+                action = cmd["action"]
+                if action == "clear":
+                    cart["items"] = {}
+                    continue
+                
+                name = cmd["item_name"].replace(" ", "_").lower()  # Normalize keys
+                qty = cmd["quantity"]
                 
                 inv_item = inventory.get(name, {})
                 price = inv_item.get("price", 0.0)
@@ -228,8 +228,8 @@ def process_command(request):
         
         # Return both the LLM's interpretation and the new cart state
         return JsonResponse({
-            "interpreted_action": action,
-            "interpreted_items": items,
+            "interpreted_action": "processed",
+            "interpreted_items": commands,
             "cart": updated_cart
         })
         
