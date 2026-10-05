@@ -1,7 +1,106 @@
 {
-    "apple": {"unit": "kg", "price": 100},
-    "banana": {"unit": "piece", "price": 10},
-    "bread_loaf": {"unit": "piece", "price": 40},
-    "potato": {"unit": "kg", "price": 30},
-    "milk": {"unit": "liter", "price": 50}
+    "apple": {
+        "unit": "kg",
+        "price": 100
+    },
+    "banana": {
+        "unit": "piece",
+        "price": 10
+    },
+    "bread_loaf": {
+        "unit": "piece",
+        "price": 40
+    },
+    "potato": {
+        "unit": "kg",
+        "price": 30
+    },
+    "milk": {
+        "unit": "liter",
+        "price": 50
+    },
+    "chips": {
+        "unit": "piece",
+        "price": 20
+    },
+    "tomato": {
+        "unit": "kg",
+        "price": 40
+    },
+    "onion": {
+        "unit": "kg",
+        "price": 25
+    },
+    "egg": {
+        "unit": "piece",
+        "price": 6
+    },
+    "cheese": {
+        "unit": "kg",
+        "price": 400
+    },
+    "butter": {
+        "unit": "piece",
+        "price": 55
+    },
+    "rice": {
+        "unit": "kg",
+        "price": 60
+    },
+    "wheat_flour": {
+        "unit": "kg",
+        "price": 35
+    },
+    "sugar": {
+        "unit": "kg",
+        "price": 45
+    },
+    "salt": {
+        "unit": "kg",
+        "price": 20
+    },
+    "cooking_oil": {
+        "unit": "liter",
+        "price": 120
+    },
+    "tea_powder": {
+        "unit": "kg",
+        "price": 300
+    },
+    "coffee_powder": {
+        "unit": "kg",
+        "price": 500
+    },
+    "biscuit": {
+        "unit": "piece",
+        "price": 15
+    },
+    "chocolate": {
+        "unit": "piece",
+        "price": 25
+    },
+    "soap": {
+        "unit": "piece",
+        "price": 30
+    },
+    "shampoo": {
+        "unit": "piece",
+        "price": 150
+    },
+    "toothpaste": {
+        "unit": "piece",
+        "price": 80
+    },
+    "washing_powder": {
+        "unit": "kg",
+        "price": 100
+    },
+    "bottle_water": {
+        "unit": "liter",
+        "price": 20
+    },
+    "coca_cola": {
+        "unit": "liter",
+        "price": 40
+    }
 }
