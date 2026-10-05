@@ -1,3 +1,9 @@
 {
-    "items": {}
+    "items": {
+        "apple": {
+            "quantity": 1.0,
+            "price": 100,
+            "total_price": 100.0
+        }
+    }
 }

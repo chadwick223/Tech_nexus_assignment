@@ -128,16 +128,22 @@ async function sendCommand(formData) {
             body: formData
         });
         
+        let data;
+        try {
+            data = await res.json();
+        } catch (jsonErr) {
+            throw new Error(`Server returned an invalid response (Status: ${res.status}). Check backend terminal logs for a crash.`);
+        }
+
         if (res.ok) {
-            const data = await res.json();
             showFeedback(`AI extracted: ${data.interpreted_action} ${data.interpreted_items.length} item(s)`);
             renderCart(data.cart);
         } else {
-            const err = await res.json();
-            showFeedback(`Error: ${err.error || err.message || "Failed to process command"}`, true);
+            showFeedback(`Error: ${data.error || data.message || "Failed to process command"}`, true);
         }
     } catch (e) {
-        showFeedback("Network error occurred.", true);
+        console.error("Command Error:", e);
+        showFeedback(e.message || "Network error occurred.", true);
     } finally {
         if(btn) btn.innerText = "Send Command";
     }
@@ -199,7 +205,54 @@ function showFeedback(msg, isError=false) {
     }, 5000);
 }
 
-// --- Voice Recording Logic (Ported from voice_ui.html) ---
+// --- Camera Modal Logic ---
+let cameraStream = null;
+
+document.getElementById("btn-camera").addEventListener("click", async () => {
+    const modal = document.getElementById("camera-modal");
+    const video = document.getElementById("camera-preview");
+    modal.style.display = "flex";
+    
+    try {
+        cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        video.srcObject = cameraStream;
+    } catch (err) {
+        alert("Camera not accessible.");
+        modal.style.display = "none";
+    }
+});
+
+document.getElementById("btn-close-camera").addEventListener("click", () => {
+    closeCamera();
+});
+
+document.getElementById("btn-capture").addEventListener("click", () => {
+    const video = document.getElementById("camera-preview");
+    const canvas = document.getElementById("camera-canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    canvas.toBlob(async (blob) => {
+        closeCamera();
+        
+        const formData = new FormData();
+        formData.append("image", blob, "capture.jpg");
+        document.getElementById("file-name").innerText = "Captured Photo";
+        await sendCommand(formData);
+    }, "image/jpeg");
+});
+
+function closeCamera() {
+    document.getElementById("camera-modal").style.display = "none";
+    if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream = null;
+    }
+}
+
+// --- Voice Recording Logic (Continuous Loop) ---
 let audioContext, analyser, microphone, scriptProcessor;
 let isRecording = false;
 let mediaRecorder;
@@ -207,6 +260,7 @@ let audioChunks = [];
 let silenceStart = Date.now();
 const SILENCE_THRESHOLD = 2000; // 2 seconds of silence
 const VOLUME_THRESHOLD = 5;
+let voiceStream = null;
 
 async function setupVoiceRecording() {
     const btn = document.getElementById("btn-record");
@@ -215,28 +269,54 @@ async function setupVoiceRecording() {
         if (!isRecording) {
             startRecording();
         } else {
-            stopRecording();
+            stopRecording(false);
         }
     });
 }
 
 async function startRecording() {
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        if (!voiceStream) {
+            voiceStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        }
         
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        analyser = audioContext.createAnalyser();
-        microphone = audioContext.createMediaStreamSource(stream);
-        scriptProcessor = audioContext.createScriptProcessor(2048, 1, 1);
+        if (!audioContext) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+            microphone = audioContext.createMediaStreamSource(voiceStream);
+            scriptProcessor = audioContext.createScriptProcessor(2048, 1, 1);
 
-        analyser.smoothingTimeConstant = 0.8;
-        analyser.fftSize = 1024;
+            analyser.smoothingTimeConstant = 0.8;
+            analyser.fftSize = 1024;
 
-        microphone.connect(analyser);
-        analyser.connect(scriptProcessor);
-        scriptProcessor.connect(audioContext.destination);
+            microphone.connect(analyser);
+            analyser.connect(scriptProcessor);
+            scriptProcessor.connect(audioContext.destination);
 
-        mediaRecorder = new MediaRecorder(stream);
+            // Monitor Audio Volume for auto-restart logic
+            scriptProcessor.onaudioprocess = function() {
+                const array = new Uint8Array(analyser.frequencyBinCount);
+                analyser.getByteFrequencyData(array);
+                
+                let values = 0;
+                const length = array.length;
+                for (let i = 0; i < length; i++) {
+                    values += (array[i]);
+                }
+                const average = values / length;
+
+                if (average > VOLUME_THRESHOLD) {
+                    silenceStart = Date.now(); // Reset silence timer
+                } else {
+                    if (Date.now() - silenceStart > SILENCE_THRESHOLD && isRecording) {
+                        // Auto-stop after silence and RESTART!
+                        stopRecording(true);
+                    }
+                }
+            };
+        }
+
+        mediaRecorder = new MediaRecorder(voiceStream);
         audioChunks = [];
 
         mediaRecorder.ondataavailable = event => {
@@ -246,17 +326,27 @@ async function startRecording() {
         mediaRecorder.onstop = async () => {
             if (audioChunks.length > 0) {
                 const blob = new Blob(audioChunks, { type: 'audio/webm' });
+                audioChunks = []; // clear chunks
                 const formData = new FormData();
                 formData.append("audio", blob, "voice_command.webm");
                 
                 document.getElementById("voice-status").innerText = "Processing audio with AI...";
                 await sendCommand(formData);
-                document.getElementById("voice-status").innerText = "Ready to record...";
+                document.getElementById("voice-status").innerText = isRecording ? "Listening... speak now." : "Ready to record...";
+            }
+            
+            if (isRecording) {
+                // Restart immediately for next phrase
+                try {
+                    mediaRecorder.start();
+                    silenceStart = Date.now();
+                } catch(e) {}
             }
         };
 
         mediaRecorder.start();
         isRecording = true;
+        silenceStart = Date.now();
         
         // Update UI
         const btn = document.getElementById("btn-record");
@@ -264,44 +354,33 @@ async function startRecording() {
         document.getElementById("record-text").innerText = "Stop Listening";
         document.getElementById("voice-status").innerText = "Listening... speak now.";
 
-        // Monitor Audio Volume
-        scriptProcessor.onaudioprocess = function() {
-            const array = new Uint8Array(analyser.frequencyBinCount);
-            analyser.getByteFrequencyData(array);
-            
-            let values = 0;
-            const length = array.length;
-            for (let i = 0; i < length; i++) {
-                values += (array[i]);
-            }
-            const average = values / length;
-
-            if (average > VOLUME_THRESHOLD) {
-                silenceStart = Date.now(); // Reset silence timer
-            } else {
-                if (Date.now() - silenceStart > SILENCE_THRESHOLD && isRecording) {
-                    // Auto-stop after silence
-                    stopRecording();
-                }
-            }
-        };
-
     } catch (err) {
         console.error("Error accessing microphone:", err);
         alert("Could not access microphone.");
     }
 }
 
-function stopRecording() {
+function stopRecording(restart = false) {
     if (!isRecording) return;
     
-    mediaRecorder.stop();
-    microphone.disconnect();
-    scriptProcessor.disconnect();
-    isRecording = false;
+    mediaRecorder.stop(); // triggers onstop and uploads
+    
+    if (!restart) {
+        isRecording = false;
+        if (voiceStream) {
+            voiceStream.getTracks().forEach(track => track.stop());
+            voiceStream = null;
+        }
+        if (scriptProcessor) {
+            scriptProcessor.disconnect();
+            microphone.disconnect();
+            audioContext.close();
+            audioContext = null;
+        }
 
-    // Update UI
-    const btn = document.getElementById("btn-record");
-    btn.classList.remove("recording");
-    document.getElementById("record-text").innerText = "Start Listening";
+        // Update UI
+        const btn = document.getElementById("btn-record");
+        btn.classList.remove("recording");
+        document.getElementById("record-text").innerText = "Start Listening";
+    }
 }

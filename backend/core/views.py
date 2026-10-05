@@ -130,104 +130,113 @@ def process_command(request):
     Unified endpoint to handle voice, image, and text commands.
     It routes to the correct pipeline service, then updates the cart.
     """
-    verification_result = None
-    
-    # 1. SMART ROUTING
-    if request.FILES.get('audio'):
-        # Handle Audio
-        audio_file = request.FILES['audio']
+    try:
+        verification_result = None
         
-        # Save uploaded file to a temporary file for pydub to process
-        ext = os.path.splitext(audio_file.name)[1]
-        with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as temp_audio:
-            for chunk in audio_file.chunks():
-                temp_audio.write(chunk)
-            temp_path = temp_audio.name
+        # 1. SMART ROUTING
+        if request.FILES.get('audio'):
+            # Handle Audio
+            audio_file = request.FILES['audio']
             
-        try:
-            verification_result = process_voice_billing(temp_path)
-        finally:
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
+            # Save uploaded file to a temporary file for pydub to process
+            ext = os.path.splitext(audio_file.name)[1]
+            with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as temp_audio:
+                for chunk in audio_file.chunks():
+                    temp_audio.write(chunk)
+                temp_path = temp_audio.name
                 
-    elif request.FILES.get('image'):
-        # Handle Image
-        image_file = request.FILES['image']
-        text_input = request.POST.get('text', None)
-        mime_type = image_file.content_type
-        
-        # Convert image to base64 for Gemini
-        image_b64 = base64.b64encode(image_file.read()).decode('utf-8')
-        verification_result = process_image_billing(image_b64=image_b64, mime_type=mime_type, text=text_input)
-        
-    else:
-        # Handle Text (could be form-data or JSON)
-        text_input = request.POST.get('text')
-        if not text_input and request.content_type == 'application/json':
             try:
-                body = json.loads(request.body)
-                text_input = body.get("text")
-            except json.JSONDecodeError:
-                pass
-                
-        if text_input:
-            verification_result = process_text_billing(text_input)
-        else:
-            return JsonResponse({"error": "No valid audio, image, or text input provided."}, status=400)
-
-    # 2. CHECK VERIFICATION RESULT
-    if not verification_result or verification_result.get("status") == "error":
-        return JsonResponse(verification_result or {"status": "error", "message": "Unknown error"}, status=400)
-
-    data = verification_result["data"]
-    action = data["action"]
-    items = data["items"]
-
-    # 3. APPLY TO CART
-    def apply_llm_action(cart):
-        if action == "clear":
-            cart["items"] = {}
-            return
-
-        inventory = read_inventory()
-
-        for item in items:
-            name = item["item_name"].replace(" ", "_").lower()  # Normalize keys
-            qty = item["quantity"]
-            
-            inv_item = inventory.get(name, {})
-            price = inv_item.get("price", 0.0)
-            
-            if action == "add":
-                if name in cart["items"]:
-                    cart["items"][name]["quantity"] += qty
-                else:
-                    cart["items"][name] = {"quantity": qty}
+                verification_result = process_voice_billing(temp_path)
+            finally:
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
                     
-                cart["items"][name]["price"] = price
-                cart["items"][name]["total_price"] = cart["items"][name]["quantity"] * price
+        elif request.FILES.get('image'):
+            # Handle Image
+            image_file = request.FILES['image']
+            text_input = request.POST.get('text', None)
+            mime_type = image_file.content_type
             
-            elif action == "remove":
-                if name in cart["items"]:
-                    cart["items"][name]["quantity"] = max(0, cart["items"][name]["quantity"] - qty)
-                    if cart["items"][name]["quantity"] == 0:
-                        del cart["items"][name]
-                    else:
-                        cart["items"][name]["price"] = price
-                        cart["items"][name]["total_price"] = cart["items"][name]["quantity"] * price
-                        
-            elif action == "set":
-                cart["items"][name] = {
-                    "quantity": qty,
-                    "price": price,
-                    "total_price": qty * price
-                }
-
-    updated_cart = update_cart(apply_llm_action)
+            # Convert image to base64 for Gemini
+            image_b64 = base64.b64encode(image_file.read()).decode('utf-8')
+            verification_result = process_image_billing(image_b64=image_b64, mime_type=mime_type, text=text_input)
+            
+        else:
+            # Handle Text (could be form-data or JSON)
+            text_input = request.POST.get('text')
+            if not text_input and request.content_type == 'application/json':
+                try:
+                    body = json.loads(request.body)
+                    text_input = body.get("text")
+                except json.JSONDecodeError:
+                    pass
+                    
+            if text_input:
+                verification_result = process_text_billing(text_input)
+            else:
+                return JsonResponse({"error": "No valid audio, image, or text input provided."}, status=400)
     
-    # Return both the LLM's interpretation and the new cart state
-    return JsonResponse({
-        "interpreted_action": action,
-        "interpreted_items": items,
-        "cart": updated_cart
-    })
+        # 2. CHECK VERIFICATION RESULT
+        if not verification_result or verification_result.get("status") == "error":
+            return JsonResponse(verification_result or {"status": "error", "message": "Unknown error"}, status=400)
+    
+        data = verification_result["data"]
+        action = data["action"]
+        items = data["items"]
+    
+        # 3. APPLY TO CART
+        def apply_llm_action(cart):
+            if action == "clear":
+                cart["items"] = {}
+                return
+    
+            inventory = read_inventory()
+    
+            for item in items:
+                name = item["item_name"].replace(" ", "_").lower()  # Normalize keys
+                qty = item["quantity"]
+                
+                inv_item = inventory.get(name, {})
+                price = inv_item.get("price", 0.0)
+                
+                if action == "add":
+                    if name in cart["items"]:
+                        cart["items"][name]["quantity"] += qty
+                    else:
+                        cart["items"][name] = {"quantity": qty}
+                        
+                    cart["items"][name]["price"] = price
+                    cart["items"][name]["total_price"] = cart["items"][name]["quantity"] * price
+                
+                elif action == "remove":
+                    if name in cart["items"]:
+                        cart["items"][name]["quantity"] = max(0, cart["items"][name]["quantity"] - qty)
+                        if cart["items"][name]["quantity"] == 0:
+                            del cart["items"][name]
+                        else:
+                            cart["items"][name]["price"] = price
+                            cart["items"][name]["total_price"] = cart["items"][name]["quantity"] * price
+                            
+                elif action == "set":
+                    cart["items"][name] = {
+                        "quantity": qty,
+                        "price": price,
+                        "total_price": qty * price
+                    }
+    
+        updated_cart = update_cart(apply_llm_action)
+        
+        # Return both the LLM's interpretation and the new cart state
+        return JsonResponse({
+            "interpreted_action": action,
+            "interpreted_items": items,
+            "cart": updated_cart
+        })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            "status": "error", 
+            "message": f"Backend crash: {str(e)}"
+        }, status=400)
