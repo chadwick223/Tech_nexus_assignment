@@ -3,6 +3,9 @@ import sys
 import tempfile
 import json
 from pydub import AudioSegment
+import imageio_ffmpeg
+AudioSegment.converter = imageio_ffmpeg.get_ffmpeg_exe()
+
 from .verification import verify_billing_action
 
 # Add the parent directory of backend to sys.path so we can import llm_point
