@@ -7,34 +7,34 @@ It leverages advanced Large Language Models (LLMs) and Vision Models to parse na
 ## Features
 
 - **Multi-Modal AI Inputs:**
-  - **Voice:** Speak commands (e.g., *"Add two liters of milk and a loaf of bread"*). Uses `pydub` and AI to extract items.
+  - **Voice (Continuous Loop):** Speak commands (e.g., *"Add two liters of milk and a loaf of bread"*). Features an automatic silence-detection loop that processes audio completely hands-free!
   - **Text:** Type natural language commands into the interface.
-  - **Vision/Images:** Upload a picture of products or a receipt, and the Vision pipeline will identify the items.
+  - **Vision/Images:** Snap a photo using the **Live Camera** directly in the browser, or upload a receipt to identify items automatically!
 - **Robust AI Processing Pipeline:**
   - Connects to Google Gemini and Sarvam AI APIs.
-  - Features internal normalization to map colloquial terms or different languages (e.g., "ek kilo aaloo") to structured catalog IDs ("potato").
+  - Internal normalization maps colloquial terms (e.g., "ek kilo aaloo") to structured catalog IDs ("potato").
 - **Live POS Interface:**
-  - A clean, dark-mode responsive UI built with vanilla HTML/CSS (Flexbox) and JavaScript.
+  - A clean, dark-mode responsive UI built with vanilla HTML/CSS and JavaScript.
   - Live, auto-updating order summary reflecting quantities, line totals, and grand total.
 - **Manual Overrides:**
   - Increase/decrease item quantities and delete items with a single click.
   - A manual addition section dynamically tied to the live inventory.
 - **Lightweight JSON Database:**
-  - Requires no complex SQL setup. State is stored natively in `backend/data/cart.json` and `backend/data/inventory.json`.
-  - Implements atomic `filelock` safety to prevent concurrent write collisions between AI updates and manual cashier updates.
+  - State is stored natively in `backend/data/cart.json` and `backend/data/inventory.json` using atomic `filelock` safety to prevent concurrent write collisions.
 
 ## Tech Stack
 
 - **Backend:** Python, Django
-- **Frontend:** Vanilla HTML, CSS (Flexbox), JavaScript
-- **AI / Integrations:** Google GenAI (Gemini), Sarvam AI, `pydub` (for audio processing)
+- **Frontend:** Vanilla HTML, CSS, JavaScript (Static files served by WhiteNoise)
+- **AI / Integrations:** Google GenAI (Gemini), Sarvam AI
+- **Audio Processing:** `imageio-ffmpeg` (Bundled FFmpeg binary for cross-platform zero-dependency deployment).
 - **Data Layer:** Local JSON files with atomic locking (`filelock`)
 
 ## Setup Instructions
 
 ### Prerequisites
 - Python 3.11+
-- [FFmpeg](https://ffmpeg.org/) installed and added to your system PATH (required for processing voice audio files).
+- No system-level dependencies required! FFmpeg is now automatically bundled.
 
 ### 1. Clone & Environment
 ```bash
@@ -54,7 +54,7 @@ pip install -r requirements.txt
 ```
 
 ### 3. Environment Variables
-Create a `.env` file in the root directory (or in your deployment environment) and add your API keys:
+Create a `.env` file in the root directory (or in your deployment dashboard) and add your API keys:
 ```env
 GEMINI_API_KEY="your_gemini_key_here"
 SARVAM_API_KEY="your_sarvam_key_here"
@@ -68,7 +68,8 @@ python manage.py runserver
 
 Navigate to `http://127.0.0.1:8000/` in your browser to access the POS Interface!
 
-## Deployment Note
-Because this application uses a lightweight local JSON database (`cart.json`) and requires `ffmpeg` for audio conversions, it **cannot** be deployed to Serverless platforms with read-only filesystems (like Vercel or AWS Lambda). 
-
-It is designed to be run on a traditional Virtual Machine (VM) such as an AWS EC2 instance, DigitalOcean Droplet, Railway, or Render (as a background web service).
+## Deployment Notes
+This application is perfectly configured for production deployment on Platforms-as-a-Service (PaaS) like **Render.com**.
+- **Static Files:** Served via WhiteNoise. Ensure your build command includes `python manage.py collectstatic --noinput`.
+- **Audio Processing:** Completely platform agnostic. By utilizing `imageio-ffmpeg`, the FFmpeg binary is bundled securely in the Python environment without requiring root `apt-get` packages.
+- **Data Storage:** Uses JSON file storage. On ephemeral cloud hosting like Render's free tier, this data will reset upon a new deployment. For persistent data, attach a Render Disk to the `/data` directory.
