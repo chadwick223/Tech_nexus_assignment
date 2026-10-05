@@ -15,8 +15,12 @@ def verify_billing_action(llm_response_str: str) -> dict:
     except json.JSONDecodeError:
         return {"status": "error", "message": "LLM returned invalid JSON."}
 
-    action = data.get("action")
-    items = data.get("items", [])
+    if isinstance(data, list):
+        action = "add"
+        items = data
+    else:
+        action = data.get("action", "add")
+        items = data.get("items", [])
 
     if action not in ["add", "remove", "set", "clear"]:
         return {"status": "error", "message": f"Invalid action: {action}"}

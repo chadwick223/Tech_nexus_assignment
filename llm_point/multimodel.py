@@ -64,6 +64,26 @@ def process_pos_input(text=None, image_b64=None, image_mime_type='image/jpeg'):
     else:
         contents.append("Extract the items from this image according to the system instructions.")
 
+    # Define the exact schema the LLM MUST follow
+    llm_schema = types.Schema(
+        type=types.Type.OBJECT,
+        properties={
+            "action": types.Schema(type=types.Type.STRING, description="Must be one of: add, remove, set, clear"),
+            "items": types.Schema(
+                type=types.Type.ARRAY,
+                items=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "item_name": types.Schema(type=types.Type.STRING),
+                        "quantity": types.Schema(type=types.Type.NUMBER),
+                        "unit": types.Schema(type=types.Type.STRING)
+                    }
+                )
+            )
+        },
+        required=["action", "items"]
+    )
+
     # Call Gemini Flash (the fast, free, multi-modal model)
     response = client.models.generate_content(
         model='gemini-3.1-flash-lite',
@@ -72,6 +92,7 @@ def process_pos_input(text=None, image_b64=None, image_mime_type='image/jpeg'):
             system_instruction=SYSTEM_PROMPT,
             temperature=0.0, # Keep it strictly deterministic
             response_mime_type="application/json", # This physically forces the model to return ONLY valid JSON!
+            response_schema=llm_schema, # THIS physically prevents it from returning a raw list!
         ),
     )
 
