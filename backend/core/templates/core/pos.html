@@ -1,0 +1,100 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Point of Sale</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'core/style.css' %}">
+</head>
+<body>
+    <div class="app-container">
+        <!-- AI Assistant Panel (Left) -->
+        <div class="panel ai-panel">
+            <div class="panel-header">
+                <h2>AI Assistant</h2>
+                <p>Speak, type, or upload to add items.</p>
+            </div>
+            
+            <div class="input-section">
+                <!-- Voice Controls -->
+                <div class="voice-box">
+                    <button id="btn-record" class="btn-voice">
+                        <span id="record-text">Start Listening</span>
+                    </button>
+                    <p id="voice-status" class="status-text text-muted">Ready to record...</p>
+                </div>
+
+                <div class="divider">OR</div>
+
+                <!-- Text & Image Controls -->
+                <form id="command-form" class="text-box">
+                    <textarea id="command-text" placeholder="e.g., 'Add 2 kg apples' or 'Remove 1 milk'" rows="3"></textarea>
+                    
+                    <div class="upload-box">
+                        <label for="command-image" class="btn-upload">Upload Image/Receipt</label>
+                        <input type="file" id="command-image" accept="image/*" style="display: none;">
+                        <span id="file-name" class="text-muted">No file chosen</span>
+                    </div>
+
+                    <button type="submit" id="btn-submit" class="btn-primary" style="width: 100%; margin-top: 15px;">
+                        Send Command
+                    </button>
+                </form>
+            </div>
+            
+            <div id="ai-feedback" class="feedback-box hidden">
+                <!-- AI Feedback shows here -->
+            </div>
+        </div>
+
+        <!-- Billing Summary Panel (Right) -->
+        <div class="panel cart-panel">
+            <div class="panel-header">
+                <h2>Current Order</h2>
+                <p>Live billing summary</p>
+            </div>
+
+            <!-- MANUAL ADD SECTION -->
+            <div class="manual-add-section" style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <select id="manual-item-select" style="flex: 1; padding: 10px; border-radius: 8px; background: #2a2a2a; color: white; border: 1px solid #333;">
+                    <option value="" disabled selected>Loading inventory...</option>
+                </select>
+                <input type="number" id="manual-qty" value="1" min="1" style="width: 80px; padding: 10px; border-radius: 8px; background: #2a2a2a; color: white; border: 1px solid #333;">
+                <button onclick="manualAdd()" class="btn-primary" style="padding: 10px 20px;">Add Item</button>
+            </div>
+
+            <div class="cart-container">
+                <table class="cart-table">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Qty</th>
+                            <th>Price</th>
+                            <th>Total</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="cart-body">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="cart-footer">
+                <div class="grand-total">
+                    <span>Grand Total:</span>
+                    <span id="grand-total-amount">₹0.00</span>
+                </div>
+                <div class="action-buttons">
+                    <button id="btn-clear" class="btn-danger">Clear Cart</button>
+                    <button id="btn-checkout" class="btn-success">Checkout</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{% static 'core/app.js' %}"></script>
+</body>
+</html>

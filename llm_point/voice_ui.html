@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice POS - Auto Sentence Slicer</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background: #1a1a1a; color: white; }
+        .container { max-width: 600px; margin: 0 auto; background: #2d2d2d; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        h1 { margin-top: 0; color: #4CAF50; }
+        button { background: #4CAF50; color: white; border: none; padding: 12px 24px; font-size: 16px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #45a049; }
+        #status { margin: 20px 0; font-size: 18px; font-weight: bold; color: #aaa; }
+        .recording { color: #ff5252 !important; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        #recordingsList { margin-top: 20px; }
+        .audio-item { background: #3d3d3d; padding: 15px; margin-bottom: 10px; border-radius: 8px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Continuous Voice Input</h1>
+    <p>Click "Start Listening" and just speak naturally. The system will automatically detect when you pause/stop speaking, slice the audio, and prepare it to be sent to the backend!</p>
+    
+    <button id="startBtn">Start Listening</button>
+    <div id="status">Status: Waiting to start...</div>
+    
+    <div id="recordingsList">
+        <h3>Sliced Sentences (Ready for Backend)</h3>
+        <!-- Auto-sliced audio chunks will appear here -->
+    </div>
+</div>
+
+<script>
+    let audioContext;
+    let analyser;
+    let microphone;
+    let mediaRecorder;
+    let audioChunks = [];
+    
+    let isRecording = false;
+    let lastSpeechTime = 0;
+    
+    // CONFIGURATION
+    const SILENCE_THRESHOLD = 10; // Volume threshold (0-255). Adjust if background noise is high.
+    const SILENCE_DURATION_TO_SLICE = 1500; // 1.5 seconds of silence triggers a slice
+
+    const startBtn = document.getElementById('startBtn');
+    const statusText = document.getElementById('status');
+    const recordingsList = document.getElementById('recordingsList');
+
+    startBtn.addEventListener('click', async () => {
+        startBtn.style.display = 'none';
+        statusText.innerText = "Status: Listening for speech... 🎤";
+        
+        // 1. Request microphone access
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        
+        // 2. Set up AudioContext and Analyser for Voice Activity Detection
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 512;
+        analyser.smoothingTimeConstant = 0.5;
+        
+        microphone = audioContext.createMediaStreamSource(stream);
+        microphone.connect(analyser);
+        
+        // 3. Set up the MediaRecorder to capture the actual audio data
+        setupMediaRecorder(stream);
+        
+        // 4. Start the continuous volume monitoring loop
+        monitorAudioVolume();
+    });
+
+    function setupMediaRecorder(stream) {
+        mediaRecorder = new MediaRecorder(stream);
+        
+        mediaRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0) audioChunks.push(event.data);
+        };
+        
+        mediaRecorder.onstop = () => {
+            // When a slice finishes, compile the chunks into a Blob
+            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            audioChunks = []; // reset for the next sentence
+            
+            // Display it on the screen so you can verify it sliced perfectly!
+            displaySlicedAudio(audioBlob);
+
+            // TODO: In the future, this is where you would POST the audioBlob to your Django view!
+            // const formData = new FormData();
+            // formData.append("audio", audioBlob, "sentence.webm");
+            // fetch("/api/voice-command/", { method: "POST", body: formData });
+        };
+    }
+
+    function monitorAudioVolume() {
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        
+        function loop() {
+            analyser.getByteFrequencyData(dataArray);
+            
+            // Calculate average volume
+            let sum = 0;
+            for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+            let averageVolume = sum / dataArray.length;
+            
+            if (averageVolume > SILENCE_THRESHOLD) {
+                // User is speaking!
+                lastSpeechTime = Date.now();
+                
+                if (!isRecording) {
+                    isRecording = true;
+                    mediaRecorder.start();
+                    statusText.innerText = "Status: Recording... 🔴";
+                    statusText.classList.add("recording");
+                }
+            } else {
+                // User is quiet
+                if (isRecording) {
+                    const timeSinceLastSpeech = Date.now() - lastSpeechTime;
+                    
+                    // If they have been quiet for longer than the slice duration, cut the audio!
+                    if (timeSinceLastSpeech > SILENCE_DURATION_TO_SLICE) {
+                        isRecording = false;
+                        mediaRecorder.stop();
+                        statusText.innerText = "Status: Listening for speech... 🎤";
+                        statusText.classList.remove("recording");
+                    }
+                }
+            }
+            
+            requestAnimationFrame(loop);
+        }
+        
+        loop();
+    }
+
+    function displaySlicedAudio(blob) {
+        const url = URL.createObjectURL(blob);
+        const div = document.createElement("div");
+        div.className = "audio-item";
+        
+        const audio = document.createElement("audio");
+        audio.controls = true;
+        audio.src = url;
+        
+        const label = document.createElement("p");
+        label.innerText = `Captured Sentence (${new Date().toLocaleTimeString()})`;
+        label.style.margin = "0 0 10px 0";
+        
+        div.appendChild(label);
+        div.appendChild(audio);
+        recordingsList.prepend(div);
+    }
+</script>
+
+</body>
+</html>

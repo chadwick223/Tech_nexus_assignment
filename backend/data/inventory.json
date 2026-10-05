@@ -1,0 +1,7 @@
+{
+    "apple": {"unit": "kg", "price": 100},
+    "banana": {"unit": "piece", "price": 10},
+    "bread_loaf": {"unit": "piece", "price": 40},
+    "potato": {"unit": "kg", "price": 30},
+    "milk": {"unit": "liter", "price": 50}
+}
