@@ -2,10 +2,8 @@ import os
 import sys
 import tempfile
 import json
-from pydub import AudioSegment
+import subprocess
 import imageio_ffmpeg
-AudioSegment.converter = imageio_ffmpeg.get_ffmpeg_exe()
-
 from .verification import verify_billing_action
 
 # Add the parent directory of backend to sys.path so we can import llm_point
@@ -16,9 +14,10 @@ from llm_point.voice import transcribe_audio_file
 from llm_point.multimodel import process_pos_input
 
 def convert_to_wav(input_path: str, output_path: str):
-    """Converts an audio file to .wav format using pydub."""
-    audio = AudioSegment.from_file(input_path)
-    audio.export(output_path, format="wav")
+    """Converts an audio file to .wav format using bundled ffmpeg directly."""
+    ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+    # -y overwrites output, -i is input, -loglevel error reduces noise
+    subprocess.run([ffmpeg_exe, "-y", "-loglevel", "error", "-i", input_path, output_path], check=True)
 
 def process_voice_billing(audio_file_path: str):
     """Processes a voice input: converts to wav, transcribes, gets LLM JSON, and verifies it."""
