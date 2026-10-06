@@ -102,5 +102,141 @@
     "coca_cola": {
         "unit": "liter",
         "price": 40
+    },
+    "orange": {
+        "unit": "kg",
+        "price": 80
+    },
+    "mango": {
+        "unit": "kg",
+        "price": 150
+    },
+    "grape": {
+        "unit": "kg",
+        "price": 120
+    },
+    "papaya": {
+        "unit": "piece",
+        "price": 50
+    },
+    "watermelon": {
+        "unit": "piece",
+        "price": 70
+    },
+    "pineapple": {
+        "unit": "piece",
+        "price": 90
+    },
+    "lemon": {
+        "unit": "piece",
+        "price": 5
+    },
+    "carrot": {
+        "unit": "kg",
+        "price": 50
+    },
+    "cabbage": {
+        "unit": "piece",
+        "price": 40
+    },
+    "cauliflower": {
+        "unit": "piece",
+        "price": 45
+    },
+    "spinach": {
+        "unit": "piece",
+        "price": 20
+    },
+    "green_chili": {
+        "unit": "kg",
+        "price": 80
+    },
+    "garlic": {
+        "unit": "kg",
+        "price": 200
+    },
+    "ginger": {
+        "unit": "kg",
+        "price": 150
+    },
+    "coriander": {
+        "unit": "piece",
+        "price": 15
+    },
+    "mint": {
+        "unit": "piece",
+        "price": 10
+    },
+    "capsicum": {
+        "unit": "kg",
+        "price": 60
+    },
+    "cucumber": {
+        "unit": "kg",
+        "price": 30
+    },
+    "paneer": {
+        "unit": "kg",
+        "price": 350
+    },
+    "yogurt": {
+        "unit": "kg",
+        "price": 60
+    },
+    "lentil": {
+        "unit": "kg",
+        "price": 120
+    },
+    "chickpea": {
+        "unit": "kg",
+        "price": 140
+    },
+    "rajma": {
+        "unit": "kg",
+        "price": 160
+    },
+    "mustard_oil": {
+        "unit": "liter",
+        "price": 150
+    },
+    "ghee": {
+        "unit": "kg",
+        "price": 600
+    },
+    "black_pepper": {
+        "unit": "kg",
+        "price": 800
+    },
+    "cumin_seed": {
+        "unit": "kg",
+        "price": 400
+    },
+    "turmeric_powder": {
+        "unit": "kg",
+        "price": 250
+    },
+    "red_chili_powder": {
+        "unit": "kg",
+        "price": 300
+    },
+    "garam_masala": {
+        "unit": "kg",
+        "price": 500
+    },
+    "peanut": {
+        "unit": "kg",
+        "price": 120
+    },
+    "almond": {
+        "unit": "kg",
+        "price": 800
+    },
+    "cashew": {
+        "unit": "kg",
+        "price": 1000
+    },
+    "raisin": {
+        "unit": "kg",
+        "price": 300
     }
 }
